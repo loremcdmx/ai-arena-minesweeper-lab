@@ -20,6 +20,7 @@ import {
 import {
   collectUnlockedMilestones,
   nextUnreachedMilestone,
+  stableChampionElo,
 } from './lib/elo'
 import { applyMove, chooseMove } from './lib/evolution'
 import {
@@ -266,9 +267,10 @@ function App() {
       const currentMeta =
         mineEloMetaMap[activeProfile.id] ??
         defaultMinesweeperEloMeta(latestSummary, activeProfile.board)
-      const nextCurrentElo = mineCalibration.running
+      const projectedElo = mineCalibration.running
         ? currentMeta.currentElo
         : estimatedMineElo
+      const nextCurrentElo = stableChampionElo(currentMeta, projectedElo)
       const unlocked = collectUnlockedMilestones(
         nextCurrentElo,
         currentMeta.archivedMilestones,
@@ -866,11 +868,15 @@ function App() {
         const currentMeta =
           mineEloMetaMap[activeProfile.id] ??
           defaultMinesweeperEloMeta(latestSummary, activeProfile.board)
+        const stableCurrentElo = stableChampionElo(
+          currentMeta,
+          mineCalibration.currentElo,
+        )
         const nextMeta = {
           ...currentMeta,
-          currentElo: mineCalibration.currentElo,
+          currentElo: stableCurrentElo,
           calibratedElo: mineCalibration.currentElo,
-          peakElo: Math.max(currentMeta.peakElo, mineCalibration.currentElo),
+          peakElo: Math.max(currentMeta.peakElo, stableCurrentElo),
           lastCalibratedAt: completedAt,
         }
         const unlocked = collectUnlockedMilestones(
@@ -901,20 +907,20 @@ function App() {
                       createMinesweeperSnapshot(
                         activeProfile,
                         latestSummary,
-                        mineCalibration.currentElo,
-                        Math.round(mineCalibration.currentElo),
+                        stableCurrentElo,
+                        Math.round(stableCurrentElo),
                         'peak',
                       ),
                     ]
                   : []),
                 ...unlocked.map((milestone) =>
-                  createMinesweeperSnapshot(
-                    activeProfile,
-                    latestSummary,
-                    mineCalibration.currentElo,
-                    milestone,
-                    'milestone',
-                  ),
+                    createMinesweeperSnapshot(
+                      activeProfile,
+                      latestSummary,
+                      stableCurrentElo,
+                      milestone,
+                      'milestone',
+                    ),
                 ),
               ],
             ),

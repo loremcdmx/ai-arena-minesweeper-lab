@@ -54,6 +54,10 @@ export function createEloMeta(baseElo: number): EloProfileMeta {
   }
 }
 
+export function stableChampionElo(meta: EloProfileMeta, candidateElo: number) {
+  return clamp(Math.max(meta.currentElo, meta.peakElo, candidateElo), 100, 3000)
+}
+
 export function nextUnreachedMilestone(
   currentElo: number,
   archivedMilestones: number[],

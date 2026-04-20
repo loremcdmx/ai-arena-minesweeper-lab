@@ -3,7 +3,12 @@ import { EloArchivePanel } from './EloArchivePanel'
 import { LineChart } from './LineChart'
 import { StatusMeter } from './StatusMeter'
 import { mergeSnapshotArchive } from '../lib/archiveSnapshots'
-import { collectUnlockedMilestones, nextUnreachedMilestone, type EloProfileMeta } from '../lib/elo'
+import {
+  collectUnlockedMilestones,
+  nextUnreachedMilestone,
+  stableChampionElo,
+  type EloProfileMeta,
+} from '../lib/elo'
 import { referenceSource, referenceViewItems } from '../lib/referenceAnchors'
 import {
   STRATEGY_GAME_DEFINITIONS,
@@ -1225,9 +1230,10 @@ export function StrategyArena({ game }: StrategyArenaProps) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const currentMeta = eloMetaMap[activeProfile.id] ?? defaultStrategyEloMeta(game, activeProfile)
-      const nextCurrentElo = calibration.running
+      const projectedElo = calibration.running
         ? currentMeta.currentElo
         : estimatedElo
+      const nextCurrentElo = stableChampionElo(currentMeta, projectedElo)
       const unlocked = collectUnlockedMilestones(
         nextCurrentElo,
         currentMeta.archivedMilestones,
@@ -1366,11 +1372,15 @@ export function StrategyArena({ game }: StrategyArenaProps) {
         const completedAt = Date.now()
         const currentMeta =
           eloMetaMap[activeProfile.id] ?? defaultStrategyEloMeta(game, activeProfile)
+        const stableCurrentElo = stableChampionElo(
+          currentMeta,
+          calibration.currentElo,
+        )
         const nextMeta = {
           ...currentMeta,
-          currentElo: calibration.currentElo,
+          currentElo: stableCurrentElo,
           calibratedElo: calibration.currentElo,
-          peakElo: Math.max(currentMeta.peakElo, calibration.currentElo),
+          peakElo: Math.max(currentMeta.peakElo, stableCurrentElo),
           lastCalibratedAt: completedAt,
         }
         const unlocked = collectUnlockedMilestones(
@@ -1399,20 +1409,20 @@ export function StrategyArena({ game }: StrategyArenaProps) {
                     createStrategySnapshot(
                       game,
                       activeProfile,
-                      calibration.currentElo,
-                      Math.round(calibration.currentElo),
+                      stableCurrentElo,
+                      Math.round(stableCurrentElo),
                       'peak',
                     ),
                   ]
                 : []),
               ...unlocked.map((milestone) =>
-                createStrategySnapshot(
-                  game,
-                  activeProfile,
-                  calibration.currentElo,
-                  milestone,
-                  'milestone',
-                ),
+                  createStrategySnapshot(
+                    game,
+                    activeProfile,
+                    stableCurrentElo,
+                    milestone,
+                    'milestone',
+                  ),
               ),
             ]),
           )
