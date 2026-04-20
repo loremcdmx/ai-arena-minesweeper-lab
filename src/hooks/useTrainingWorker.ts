@@ -87,7 +87,7 @@ export function useTrainingWorker(initialHistory: GenerationSummary[]) {
         targetGenerations: settings.generations,
         error: null,
         logs: [
-          `launch ${new Date().toLocaleTimeString()} | board ${settings.board.rows}x${settings.board.cols}x${settings.board.mines} | pop ${settings.populationSize} | gens ${settings.generations} | cpu ${settings.parallelWorkers}`,
+          `launch ${new Date().toLocaleTimeString()} | board ${settings.board.rows}x${settings.board.cols}x${settings.board.mines} | pop ${settings.populationSize} | gens ${settings.generations} | mut x${settings.mutationAggression.toFixed(2)} | novelty ${settings.noveltyWeight.toFixed(2)} | solver ${settings.frontierSolverCells} | cpu ${settings.parallelWorkers}`,
           ...current.logs,
         ].slice(0, 120),
       }))

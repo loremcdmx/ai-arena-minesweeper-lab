@@ -9,6 +9,7 @@ import { countHiddenCells, countNeighborState, forEachNeighbor } from './mineswe
 import type { RandomSource } from './random'
 
 export const INPUT_FEATURES = 24
+export const OUTPUT_HEADS = 3
 
 function createWeightMatrix(rows: number, cols: number, random: RandomSource): WeightMatrix {
   const limit = Math.sqrt(6 / (rows + cols))
@@ -41,6 +42,46 @@ export function cloneNetwork(network: NeuralNetwork): NeuralNetwork {
     })),
     biases: network.biases.map((row) => [...row]),
   }
+}
+
+export function normalizeNetworkShape(
+  network: NeuralNetwork,
+  layers: number[],
+  random: RandomSource,
+): NeuralNetwork {
+  if (
+    network.layers.length === layers.length &&
+    network.layers.every((size, index) => size === layers[index])
+  ) {
+    return cloneNetwork(network)
+  }
+
+  const next = createNetwork(layers, random)
+  const layerCount = Math.min(network.weights.length, next.weights.length)
+
+  for (let layerIndex = 0; layerIndex < layerCount; layerIndex += 1) {
+    const sourceMatrix = network.weights[layerIndex]
+    const targetMatrix = next.weights[layerIndex]
+    const rows = Math.min(sourceMatrix.rows, targetMatrix.rows)
+    const cols = Math.min(sourceMatrix.cols, targetMatrix.cols)
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        targetMatrix.values[row * targetMatrix.cols + col] =
+          sourceMatrix.values[row * sourceMatrix.cols + col]
+      }
+    }
+
+    const biasCount = Math.min(
+      network.biases[layerIndex].length,
+      next.biases[layerIndex].length,
+    )
+    for (let index = 0; index < biasCount; index += 1) {
+      next.biases[layerIndex][index] = network.biases[layerIndex][index]
+    }
+  }
+
+  return next
 }
 
 function activate(value: number): number {
@@ -223,16 +264,29 @@ export function evaluateCandidate(
     mineSignal: features[12],
     risk: features[14],
   }
-  const [openLogit, flagLogit] = forward(network, features)
-  const openScore = sigmoid(openLogit + constraints.safeSignal * 2.2 - constraints.mineSignal * 1.8)
-  const flagScore = sigmoid(flagLogit + constraints.mineSignal * 2.4 - constraints.safeSignal * 2.1)
+  const outputs = forward(network, features)
+  const [openHead, flagHead, valueHead] = outputs
+  const valueScore =
+    typeof valueHead === 'number'
+      ? sigmoid(valueHead)
+      : sigmoid(openHead - flagHead + constraints.safeSignal - constraints.mineSignal)
+  const valueBias = (valueScore - 0.5) * 0.36
+  const openScore = sigmoid(
+    openHead + constraints.safeSignal * 2.2 - constraints.mineSignal * 1.8 + valueBias,
+  )
+  const flagScore = sigmoid(
+    flagHead + constraints.mineSignal * 2.4 - constraints.safeSignal * 2.1 - valueBias,
+  )
 
   return {
     row,
     col,
     openScore,
     flagScore,
+    valueScore,
     riskEstimate: constraints.risk,
+    exactRisk: null,
+    solverSamples: 0,
     frontier: features[10] > 0,
     safeSignal: constraints.safeSignal,
     mineSignal: constraints.mineSignal,

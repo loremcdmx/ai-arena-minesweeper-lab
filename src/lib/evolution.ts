@@ -15,7 +15,16 @@ import {
   revealCell,
   toggleFlag,
 } from './minesweeper'
-import { cloneNetwork, createNetwork, evaluateCandidate, networkDistance, summarizeWeights, INPUT_FEATURES } from './neural'
+import {
+  cloneNetwork,
+  createNetwork,
+  evaluateCandidate,
+  networkDistance,
+  normalizeNetworkShape,
+  summarizeWeights,
+  INPUT_FEATURES,
+  OUTPUT_HEADS,
+} from './neural'
 import { createRandom, hashSeed, type RandomSource } from './random'
 
 interface Genome {
@@ -49,6 +58,18 @@ interface BreedingPlan {
   mutationRate: number
   mutationScale: number
   explorationPressure: number
+}
+
+interface MovePolicySettings {
+  frontierSolverCells: number
+  logicAssistStrength: number
+  riskTolerance: number
+  valueHeadWeight: number
+}
+
+interface FrontierProbability {
+  risk: number
+  samples: number
 }
 
 interface HiddenCellRef {
@@ -274,6 +295,122 @@ function logicRiskForCell(
   )
 }
 
+function resolveMovePolicy(
+  settings?: Partial<MovePolicySettings>,
+): MovePolicySettings {
+  return {
+    frontierSolverCells: Math.max(
+      0,
+      Math.round(settings?.frontierSolverCells ?? 16),
+    ),
+    logicAssistStrength: clamp(settings?.logicAssistStrength ?? 0.82, 0, 1),
+    riskTolerance: clamp(settings?.riskTolerance ?? 0.18, 0, 0.65),
+    valueHeadWeight: clamp(settings?.valueHeadWeight ?? 0.22, 0, 1),
+  }
+}
+
+function frontierProbabilityMap(
+  game: GameSession,
+  constraints: HiddenConstraint[],
+  maxCells: number,
+): Map<string, FrontierProbability> {
+  if (maxCells <= 0 || constraints.length === 0) {
+    return new Map()
+  }
+
+  const cellByKey = new Map<string, HiddenCellRef>()
+  constraints.forEach((constraint) => {
+    constraint.cells.forEach((cell) => cellByKey.set(cell.key, cell))
+  })
+
+  const cells = [...cellByKey.values()]
+  if (cells.length === 0 || cells.length > maxCells) {
+    return new Map()
+  }
+
+  const cellIndex = new Map(cells.map((cell, index) => [cell.key, index]))
+  const indexedConstraints = constraints.map((constraint) => ({
+    requiredMines: constraint.requiredMines,
+    indexes: constraint.cells.map((cell) => cellIndex.get(cell.key) ?? -1),
+  }))
+  const remainingMines = Math.max(0, game.config.mines - game.flagsUsed)
+  const hiddenCells = countAvailableHiddenCells(game)
+  const outsideCells = Math.max(0, hiddenCells - cells.length)
+  const assignment = Array<number>(cells.length).fill(-1)
+  const mineCounts = Array<number>(cells.length).fill(0)
+  let totalAssignments = 0
+
+  const isPartialValid = (assignedMineTotal: number) => {
+    if (assignedMineTotal > remainingMines) {
+      return false
+    }
+
+    return indexedConstraints.every((constraint) => {
+      let assigned = 0
+      let mines = 0
+      for (const index of constraint.indexes) {
+        const value = assignment[index]
+        if (value === -1) {
+          continue
+        }
+        assigned += 1
+        mines += value
+      }
+
+      const unknown = constraint.indexes.length - assigned
+      return (
+        mines <= constraint.requiredMines &&
+        mines + unknown >= constraint.requiredMines
+      )
+    })
+  }
+
+  const visit = (index: number, assignedMineTotal: number) => {
+    if (index >= cells.length) {
+      if (
+        !isPartialValid(assignedMineTotal) ||
+        assignedMineTotal + outsideCells < remainingMines
+      ) {
+        return
+      }
+
+      totalAssignments += 1
+      assignment.forEach((value, cellIndex) => {
+        mineCounts[cellIndex] += value
+      })
+      return
+    }
+
+    assignment[index] = 0
+    if (isPartialValid(assignedMineTotal)) {
+      visit(index + 1, assignedMineTotal)
+    }
+
+    assignment[index] = 1
+    if (isPartialValid(assignedMineTotal + 1)) {
+      visit(index + 1, assignedMineTotal + 1)
+    }
+
+    assignment[index] = -1
+  }
+
+  visit(0, 0)
+
+  if (totalAssignments === 0) {
+    return new Map()
+  }
+
+  return new Map(
+    cells.map((cell, index) => [
+      cell.key,
+      {
+        risk: mineCounts[index] / totalAssignments,
+        samples: totalAssignments,
+      },
+    ]),
+  )
+}
+
 function deterministicMove(
   network: NeuralNetwork,
   game: GameSession,
@@ -330,16 +467,25 @@ function buildBreedingPlan(
   diversity: number,
 ): BreedingPlan {
   const diversityGap = Math.max(0, 0.16 - diversity)
-  const explorationPressure = clamp(
+  const rawExplorationPressure = clamp(
     evolution.stagnation / 7 + diversityGap * 3.4,
     0,
     1,
   )
+  const explorationPressure = settings.adaptiveMutation ? rawExplorationPressure : 0
+  const mutationAggression = clamp(settings.mutationAggression, 0.1, 3)
   const immigrantCount = Math.min(
     settings.populationSize - 2,
     Math.max(
       0,
-      Math.round(settings.populationSize * (0.04 + explorationPressure * 0.18)),
+      Math.round(
+        settings.populationSize *
+          clamp(
+            settings.immigrantRate + explorationPressure * 0.18 * mutationAggression,
+            0,
+            0.45,
+          ),
+      ),
     ),
   )
 
@@ -350,12 +496,16 @@ function buildBreedingPlan(
     ),
     immigrantCount,
     mutationRate: clamp(
-      settings.mutationRate * (1 + explorationPressure * 0.9),
+      settings.mutationRate *
+        mutationAggression *
+        (1 + explorationPressure * 0.9),
       0.01,
       0.96,
     ),
     mutationScale: clamp(
-      settings.mutationScale * (1 + explorationPressure * 1.35),
+      settings.mutationScale *
+        Math.sqrt(mutationAggression) *
+        (1 + explorationPressure * 1.35),
       0.01,
       2.2,
     ),
@@ -370,9 +520,14 @@ export function createEvolutionState(): EvolutionState {
   }
 }
 
-export function chooseMove(network: NeuralNetwork, game: GameSession): MoveDecision | null {
+export function chooseMove(
+  network: NeuralNetwork,
+  game: GameSession,
+  settings?: Partial<MovePolicySettings>,
+): MoveDecision | null {
   let bestReveal: MoveDecision | null = null
   let bestFlag: MoveDecision | null = null
+  const policy = resolveMovePolicy(settings)
 
   if (game.moveCount === 0) {
     const centerRow = Math.floor(game.config.rows / 2)
@@ -386,6 +541,11 @@ export function chooseMove(network: NeuralNetwork, game: GameSession): MoveDecis
   }
 
   const logic = inferDeterministicCells(game)
+  const exactRisks = frontierProbabilityMap(
+    game,
+    logic.constraints,
+    policy.frontierSolverCells,
+  )
   const forcedReveal = deterministicMove(network, game, logic.safe, 'reveal')
   if (forcedReveal) {
     return forcedReveal
@@ -399,29 +559,41 @@ export function chooseMove(network: NeuralNetwork, game: GameSession): MoveDecis
   for (const { row, col } of collectCandidateCells(game)) {
     const evaluation = evaluateCandidate(network, game, row, col)
     const logicRisk = logicRiskForCell(game, row, col, logic.constraints)
+    const exactRisk = exactRisks.get(pointKey(row, col)) ?? null
+    const solverRisk = exactRisk?.risk ?? logicRisk
     const riskEstimate = clamp(
-      logicRisk * 0.72 + evaluation.riskEstimate * 0.28,
+      solverRisk * policy.logicAssistStrength +
+        evaluation.riskEstimate * (1 - policy.logicAssistStrength),
       0,
       1,
     )
+    const valueLift = (evaluation.valueScore - 0.5) * policy.valueHeadWeight
+    const riskOverTolerance = Math.max(0, riskEstimate - policy.riskTolerance)
     const revealDecision: MoveDecision = {
       ...evaluation,
       riskEstimate,
+      exactRisk: exactRisk?.risk ?? null,
+      solverSamples: exactRisk?.samples ?? 0,
       action: 'reveal',
       certainty:
         evaluation.openScore * (0.34 + (1 - riskEstimate) * 0.92) +
         evaluation.safeSignal * 0.62 +
         (evaluation.frontier ? 0.08 : 0.03) -
-        riskEstimate * 0.26,
+        riskEstimate * 0.2 -
+        riskOverTolerance * 0.42 +
+        valueLift,
     }
     const flagDecision: MoveDecision = {
       ...evaluation,
       riskEstimate,
+      exactRisk: exactRisk?.risk ?? null,
+      solverSamples: exactRisk?.samples ?? 0,
       action: 'flag',
       certainty:
         evaluation.flagScore * (0.18 + riskEstimate * 1.08) +
         evaluation.mineSignal * 0.74 +
-        riskEstimate * 0.18,
+        riskEstimate * 0.18 -
+        valueLift * 0.35,
     }
 
     if (bestReveal === null || revealDecision.certainty > bestReveal.certainty) {
@@ -441,7 +613,7 @@ export function chooseMove(network: NeuralNetwork, game: GameSession): MoveDecis
     bestFlag &&
     bestFlag.flagScore > 0.82 &&
     bestFlag.mineSignal + bestFlag.riskEstimate > bestReveal.safeSignal + 0.82 &&
-    bestFlag.riskEstimate > 0.92 &&
+    bestFlag.riskEstimate > 0.92 - policy.riskTolerance * 0.18 &&
     bestFlag.certainty > bestReveal.certainty * 0.98
   ) {
     return bestFlag
@@ -466,7 +638,7 @@ function evaluateSingleGame(network: NeuralNetwork, settings: TrainingSettings, 
   let steps = 0
 
   while ((game.status === 'ready' || game.status === 'playing') && steps < settings.maxStepsPerGame) {
-    const decision = chooseMove(network, game)
+    const decision = chooseMove(network, game, settings)
     if (!decision) {
       break
     }
@@ -600,17 +772,41 @@ export function evaluatePopulationChunk(
   return genomes.map((genome) => evaluateGenome(genome, settings, seeds))
 }
 
-export function rankGenomeResults(results: GenomeResult[]) {
-  return [...results].sort(
+export function rankGenomeResults(results: GenomeResult[], noveltyWeight = 0) {
+  const rawRanked = [...results].sort(
     (left, right) =>
       right.fitness - left.fitness ||
       right.metrics.avgClearedRatio - left.metrics.avgClearedRatio ||
       right.metrics.avgSurvivalTurns - left.metrics.avgSurvivalTurns,
   )
+  const anchor = rawRanked[0]?.network ?? null
+  const noveltyScale = clamp(noveltyWeight, 0, 1) * 18
+
+  return [...results].sort(
+    (left, right) => {
+      const leftScore =
+        left.fitness +
+        (anchor ? networkDistance(anchor, left.network) * noveltyScale : 0)
+      const rightScore =
+        right.fitness +
+        (anchor ? networkDistance(anchor, right.network) * noveltyScale : 0)
+
+      return (
+        rightScore - leftScore ||
+        right.fitness - left.fitness ||
+      right.metrics.avgClearedRatio - left.metrics.avgClearedRatio ||
+        right.metrics.avgSurvivalTurns - left.metrics.avgSurvivalTurns
+      )
+    },
+  )
 }
 
-function tournament(results: GenomeResult[], random: RandomSource): GenomeResult {
-  const size = Math.min(4, results.length)
+function tournament(
+  results: GenomeResult[],
+  random: RandomSource,
+  tournamentSize: number,
+): GenomeResult {
+  const size = Math.min(Math.max(2, Math.round(tournamentSize)), results.length)
   let winner = results[random.nextInt(results.length)]
   for (let pick = 1; pick < size; pick += 1) {
     const challenger = results[random.nextInt(results.length)]
@@ -682,19 +878,20 @@ function seedPopulation(
   seedChampion: NeuralNetwork | null,
 ): Genome[] {
   const random = createRandom(hashSeed(settings.benchmarkSeed + generation * 101))
-  const layers = [INPUT_FEATURES, ...settings.hiddenLayers, 2]
+  const layers = [INPUT_FEATURES, ...settings.hiddenLayers, OUTPUT_HEADS]
   const genomes: Genome[] = []
 
   if (seedChampion) {
+    const champion = normalizeNetworkShape(seedChampion, layers, random)
     genomes.push({
       id: makeGenomeId(generation, 0),
-      network: cloneNetwork(seedChampion),
+      network: champion,
     })
 
     for (let index = 1; index < settings.populationSize; index += 1) {
       genomes.push({
         id: makeGenomeId(generation, index),
-        network: mutate(seedChampion, settings, random),
+        network: mutate(champion, settings, random),
       })
     }
 
@@ -730,8 +927,8 @@ function breedPopulation(
   }))
 
   while (next.length < settings.populationSize - plan.immigrantCount) {
-    const left = tournament(ranked, random)
-    const right = tournament(ranked, random)
+    const left = tournament(ranked, random, settings.tournamentSize)
+    const right = tournament(ranked, random, settings.tournamentSize)
     let child =
       random.next() < settings.crossoverRate
         ? crossover(left.network, right.network, random)
@@ -765,7 +962,7 @@ export function finalizeGeneration(
   nextPopulation: Genome[]
   evolution: EvolutionState
 } {
-  const ranked = rankGenomeResults(evaluationResults)
+  const ranked = rankGenomeResults(evaluationResults, settings.noveltyWeight)
 
   const champion = ranked[0]
   const benchmark = aggregateMetrics(

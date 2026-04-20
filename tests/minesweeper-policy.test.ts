@@ -127,4 +127,24 @@ describe('minesweeper policy', () => {
     expect(move?.action).toBe('flag')
     expect(pointKey(move!.row, move!.col)).toBe('2:0')
   })
+
+  it('attaches exact frontier probability when the configured solver can enumerate the boundary', () => {
+    const game = buildGameState({
+      rows: 2,
+      cols: 2,
+      mines: ['0:1'],
+      revealed: ['0:0', '1:1'],
+    })
+
+    const move = chooseMove(testNetwork, game, {
+      frontierSolverCells: 8,
+      logicAssistStrength: 1,
+      riskTolerance: 0,
+      valueHeadWeight: 0,
+    })
+
+    expect(move).not.toBeNull()
+    expect(move?.exactRisk).toBeCloseTo(0.5)
+    expect(move?.solverSamples).toBe(2)
+  })
 })

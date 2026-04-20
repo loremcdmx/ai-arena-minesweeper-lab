@@ -91,6 +91,10 @@ export function clampBoard(config: BoardConfig): BoardConfig {
 
 export function sanitizeSettings(settings: TrainingSettings): TrainingSettings {
   const board = clampBoard(settings.board)
+  const hiddenLayers = Array.isArray(settings.hiddenLayers)
+    ? settings.hiddenLayers
+    : DEFAULT_TRAINING_SETTINGS.hiddenLayers
+
   return {
     ...DEFAULT_TRAINING_SETTINGS,
     ...settings,
@@ -123,14 +127,73 @@ export function sanitizeSettings(settings: TrainingSettings): TrainingSettings {
     ),
     mutationRate: Math.min(0.9, Math.max(0.01, settings.mutationRate)),
     mutationScale: Math.min(1.4, Math.max(0.01, settings.mutationScale)),
+    mutationAggression: Math.min(
+      3,
+      Math.max(
+        0.1,
+        settings.mutationAggression ??
+          DEFAULT_TRAINING_SETTINGS.mutationAggression,
+      ),
+    ),
+    adaptiveMutation:
+      typeof settings.adaptiveMutation === 'boolean'
+        ? settings.adaptiveMutation
+        : DEFAULT_TRAINING_SETTINGS.adaptiveMutation,
+    immigrantRate: Math.min(
+      0.35,
+      Math.max(
+        0,
+        settings.immigrantRate ?? DEFAULT_TRAINING_SETTINGS.immigrantRate,
+      ),
+    ),
+    tournamentSize: Math.min(
+      12,
+      Math.max(
+        2,
+        Math.round(settings.tournamentSize ?? DEFAULT_TRAINING_SETTINGS.tournamentSize),
+      ),
+    ),
+    noveltyWeight: Math.min(
+      1,
+      Math.max(0, settings.noveltyWeight ?? DEFAULT_TRAINING_SETTINGS.noveltyWeight),
+    ),
     crossoverRate: Math.min(1, Math.max(0, settings.crossoverRate)),
+    frontierSolverCells: Math.min(
+      22,
+      Math.max(
+        0,
+        Math.round(
+          settings.frontierSolverCells ??
+            DEFAULT_TRAINING_SETTINGS.frontierSolverCells,
+        ),
+      ),
+    ),
+    logicAssistStrength: Math.min(
+      1,
+      Math.max(
+        0,
+        settings.logicAssistStrength ??
+          DEFAULT_TRAINING_SETTINGS.logicAssistStrength,
+      ),
+    ),
+    riskTolerance: Math.min(
+      0.65,
+      Math.max(0, settings.riskTolerance ?? DEFAULT_TRAINING_SETTINGS.riskTolerance),
+    ),
+    valueHeadWeight: Math.min(
+      1,
+      Math.max(
+        0,
+        settings.valueHeadWeight ?? DEFAULT_TRAINING_SETTINGS.valueHeadWeight,
+      ),
+    ),
     maxStepsPerGame: Math.min(
       600,
       Math.max(20, Math.round(settings.maxStepsPerGame)),
     ),
     hiddenLayers:
-      settings.hiddenLayers.length > 0
-        ? settings.hiddenLayers.map((value) =>
+      hiddenLayers.length > 0
+        ? hiddenLayers.map((value) =>
             Math.min(48, Math.max(4, Math.round(value))),
           )
         : DEFAULT_TRAINING_SETTINGS.hiddenLayers,

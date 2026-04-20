@@ -37,8 +37,17 @@ function buildSettingsCacheKey(settings: TrainingSettings) {
     eliteCount: settings.eliteCount,
     mutationRate: settings.mutationRate,
     mutationScale: settings.mutationScale,
+    mutationAggression: settings.mutationAggression,
+    adaptiveMutation: settings.adaptiveMutation,
+    immigrantRate: settings.immigrantRate,
+    tournamentSize: settings.tournamentSize,
+    noveltyWeight: settings.noveltyWeight,
     crossoverRate: settings.crossoverRate,
     hiddenLayers: settings.hiddenLayers,
+    frontierSolverCells: settings.frontierSolverCells,
+    logicAssistStrength: settings.logicAssistStrength,
+    riskTolerance: settings.riskTolerance,
+    valueHeadWeight: settings.valueHeadWeight,
     maxStepsPerGame: settings.maxStepsPerGame,
     benchmarkSeed: settings.benchmarkSeed,
   })
@@ -220,7 +229,7 @@ self.onmessage = async (event: MessageEvent<TrainingWorkerCommand>) => {
           current: offset + 1,
           total: message.settings.generations,
         },
-        log: `gen ${generationNumber.toString().padStart(3, '0')} | best ${summary.bestFitness.toFixed(2)} | avg ${summary.averageFitness.toFixed(2)} | wins ${(summary.benchmark.wins / Math.max(1, summary.benchmark.games) * 100).toFixed(1)}% | div ${(summary.populationDiversity ?? 0).toFixed(3)} | mut ${(summary.adaptiveMutationRate ?? message.settings.mutationRate).toFixed(2)}/${(summary.adaptiveMutationScale ?? message.settings.mutationScale).toFixed(2)} | stall ${summary.stagnationCount ?? 0} | cpu ${message.settings.parallelWorkers}`,
+        log: `gen ${generationNumber.toString().padStart(3, '0')} | best ${summary.bestFitness.toFixed(2)} | avg ${summary.averageFitness.toFixed(2)} | wins ${(summary.benchmark.wins / Math.max(1, summary.benchmark.games) * 100).toFixed(1)}% | div ${(summary.populationDiversity ?? 0).toFixed(3)} | mut ${(summary.adaptiveMutationRate ?? message.settings.mutationRate).toFixed(2)}/${(summary.adaptiveMutationScale ?? message.settings.mutationScale).toFixed(2)} x${message.settings.mutationAggression.toFixed(2)} | novelty ${message.settings.noveltyWeight.toFixed(2)} | solver ${message.settings.frontierSolverCells} | stall ${summary.stagnationCount ?? 0} | cpu ${message.settings.parallelWorkers}`,
       })
 
       await sleep(0)

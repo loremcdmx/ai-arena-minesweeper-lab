@@ -395,7 +395,7 @@ function App() {
         }
 
         const next = cloneGame(current)
-        const decision = chooseMove(previewChampionNetwork, next)
+        const decision = chooseMove(previewChampionNetwork, next, activeSettings)
         if (!decision) {
           return createGame(previewBoardConfig, randomSeed())
         }
@@ -407,6 +407,7 @@ function App() {
     return () => window.clearInterval(interval)
   }, [
     game.status,
+    activeSettings,
     mineBoardMode,
     minesweeperLabActive,
     previewPaused,
@@ -1035,7 +1036,7 @@ function App() {
       }
 
       const next = cloneGame(current)
-      const decision = chooseMove(previewChampionNetwork, next)
+      const decision = chooseMove(previewChampionNetwork, next, activeSettings)
       if (!decision) {
         return createGame(previewBoardConfig, randomSeed())
       }
@@ -1652,7 +1653,9 @@ function App() {
               <div>
                 <span>мутация</span>
                 <strong>
-                  {(activeSettings.mutationRate * 100).toFixed(0)}% · {activeSettings.mutationScale.toFixed(2)}
+                  {(activeSettings.mutationRate * 100).toFixed(0)}% ·{' '}
+                  {activeSettings.mutationScale.toFixed(2)} · x
+                  {activeSettings.mutationAggression.toFixed(2)}
                 </strong>
               </div>
               <div>
@@ -2272,6 +2275,39 @@ function App() {
                       />
                     </label>
                     <label>
+                      <span>mutation aggression</span>
+                      <input
+                        type="number"
+                        min={0.1}
+                        max={3}
+                        step={0.05}
+                        disabled={settingsLocked}
+                        value={activeSettings.mutationAggression}
+                        data-testid="settings-mutation-aggression"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'mutationAggression',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>adaptive mutation</span>
+                      <input
+                        type="checkbox"
+                        disabled={settingsLocked}
+                        checked={activeSettings.adaptiveMutation}
+                        data-testid="settings-adaptive-mutation"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'adaptiveMutation',
+                            event.target.checked,
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
                       <span>crossover</span>
                       <input
                         type="number"
@@ -2289,6 +2325,59 @@ function App() {
                       />
                     </label>
                     <label>
+                      <span>immigrant rate</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={0.35}
+                        step={0.01}
+                        disabled={settingsLocked}
+                        value={activeSettings.immigrantRate}
+                        data-testid="settings-immigrant-rate"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'immigrantRate',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>tournament size</span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={12}
+                        disabled={settingsLocked}
+                        value={activeSettings.tournamentSize}
+                        data-testid="settings-tournament-size"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'tournamentSize',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>novelty weight</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        disabled={settingsLocked}
+                        value={activeSettings.noveltyWeight}
+                        data-testid="settings-novelty-weight"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'noveltyWeight',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
                       <span>max steps</span>
                       <input
                         type="number"
@@ -2299,6 +2388,77 @@ function App() {
                         onChange={(event) =>
                           updateActiveSetting(
                             'maxStepsPerGame',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>frontier solver cells</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={22}
+                        disabled={settingsLocked}
+                        value={activeSettings.frontierSolverCells}
+                        data-testid="settings-frontier-solver-cells"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'frontierSolverCells',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>logic assist</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        disabled={settingsLocked}
+                        value={activeSettings.logicAssistStrength}
+                        data-testid="settings-logic-assist"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'logicAssistStrength',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>risk tolerance</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={0.65}
+                        step={0.01}
+                        disabled={settingsLocked}
+                        value={activeSettings.riskTolerance}
+                        data-testid="settings-risk-tolerance"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'riskTolerance',
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>value head weight</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        disabled={settingsLocked}
+                        value={activeSettings.valueHeadWeight}
+                        data-testid="settings-value-head-weight"
+                        onChange={(event) =>
+                          updateActiveSetting(
+                            'valueHeadWeight',
                             Number(event.target.value),
                           )
                         }

@@ -53,7 +53,10 @@ export interface CandidateEvaluation {
   col: number
   openScore: number
   flagScore: number
+  valueScore: number
   riskEstimate: number
+  exactRisk: number | null
+  solverSamples: number
   frontier: boolean
   safeSignal: number
   mineSignal: number
@@ -131,8 +134,17 @@ export interface TrainingSettings {
   eliteCount: number
   mutationRate: number
   mutationScale: number
+  mutationAggression: number
+  adaptiveMutation: boolean
+  immigrantRate: number
+  tournamentSize: number
+  noveltyWeight: number
   crossoverRate: number
   hiddenLayers: number[]
+  frontierSolverCells: number
+  logicAssistStrength: number
+  riskTolerance: number
+  valueHeadWeight: number
   maxStepsPerGame: number
   continueFromChampion: boolean
   benchmarkSeed: number
