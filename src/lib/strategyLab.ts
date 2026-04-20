@@ -128,18 +128,18 @@ export interface StrategyGameDefinition {
 }
 
 const CHESS_GLYPHS: Record<string, string> = {
-  wp: 'â™™',
-  wn: '♘',
-  wb: 'â™—',
-  wr: 'â™–',
-  wq: '♕',
-  wk: 'â™"',
-  bp: '♟',
-  bn: '♞',
-  bb: '♝',
-  br: '♜',
-  bq: 'â™›',
-  bk: '♚',
+  wp: '\u2659',
+  wn: '\u2658',
+  wb: '\u2657',
+  wr: '\u2656',
+  wq: '\u2655',
+  wk: '\u2654',
+  bp: '\u265f',
+  bn: '\u265e',
+  bb: '\u265d',
+  br: '\u265c',
+  bq: '\u265b',
+  bk: '\u265a',
 }
 
 const TIC_TAC_TOE_LINES = [
@@ -1145,11 +1145,11 @@ function buildGridPreviewState(
     key: `${gameId}-${index}`,
     content:
       value === 'X'
-        ? '×'
+        ? '\u00d7'
         : value === 'O'
-          ? 'â—‹'
+          ? '\u25cb'
           : value === 'R' || value === 'Y'
-            ? '●'
+            ? '\u25cf'
             : '',
     surface: 'grid',
     owner:

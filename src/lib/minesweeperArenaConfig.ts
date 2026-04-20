@@ -86,6 +86,30 @@ export const ROADMAP_ITEMS = [
     description:
       'A helper mode that ranks candidate moves for a human player and says when the game already has a known theoretical ceiling.',
   },
+  {
+    status: 'Research',
+    title: 'Search-guided policy layer',
+    description:
+      'Add a shallow MCTS or PUCT layer over the current neural move scorer so the bot learns from candidate visits, best lines, and counterplay instead of one-ply scores only.',
+  },
+  {
+    status: 'Planned',
+    title: 'Incremental board evaluator',
+    description:
+      'Cache feature deltas after each move so chess and gravity games update evaluations like an NNUE-style engine instead of recomputing the whole board every turn.',
+  },
+  {
+    status: 'Planned',
+    title: 'Exact Minesweeper frontier',
+    description:
+      'Split the hidden boundary into constraint components, calculate exact mine probabilities, and feed that probability map back into the policy as a stronger tactical teacher.',
+  },
+  {
+    status: 'Research',
+    title: 'Analysis API overlays',
+    description:
+      'Expose each position as raw policy, principal variation, visit counts, and board-pressure layers so every arena can explain why the next move was preferred.',
+  },
 ] as const
 
 export const PROFILE_SPECIES = [

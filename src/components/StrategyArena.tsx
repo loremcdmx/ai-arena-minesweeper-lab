@@ -766,10 +766,11 @@ function StrategyBoard({ profile, game, opponents, viewerNote }: StrategyBoardPr
                     .filter(Boolean)
                     .join(' ')}
                   title={cell.key}
+                  aria-label={`${cell.key}${cell.content ? ` ${cell.content}` : ''}`}
                   onClick={() => handleBoardCellClick(cell.key)}
                   disabled={!playableKeys.has(cell.key)}
                 >
-                  <span>{cell.content}</span>
+                  <span className="strategy-cell-content">{cell.content}</span>
                 </button>
               ))}
             </div>
