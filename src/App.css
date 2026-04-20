@@ -3473,9 +3473,9 @@ input[type='range']::-webkit-slider-thumb {
 
 .switchboard-current {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 14px 16px;
   border: 1px solid rgba(222, 238, 225, 0.1);
   border-left: 4px solid var(--accent-strong);
   border-radius: 8px;
@@ -3488,20 +3488,21 @@ input[type='range']::-webkit-slider-thumb {
 
 .switchboard-current strong {
   color: var(--heading);
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 720;
+  line-height: 1.05;
 }
 
 .switchboard-current span {
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 #game-switcher.experience-switchboard {
-  grid-template-columns: minmax(220px, 0.24fr) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 0.28fr) minmax(0, 1fr);
   align-items: stretch;
-  padding: 10px;
+  padding: 14px;
 }
 
 #game-switcher .experience-card-grid {
@@ -3515,18 +3516,20 @@ input[type='range']::-webkit-slider-thumb {
   display: grid;
   grid-template-areas:
     'title badge'
-    'board badge';
+    'board badge'
+    'theory theory';
   grid-template-columns: minmax(0, 1fr) auto;
   align-content: center;
-  min-height: 0;
-  padding: 10px 12px;
+  min-height: 132px;
+  padding: 14px 16px;
 }
 
 #game-switcher .experience-card strong {
   grid-area: title;
   min-width: 0;
   overflow: hidden;
-  font-size: 16px;
+  font-size: 22px;
+  line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3542,11 +3545,14 @@ input[type='range']::-webkit-slider-thumb {
   grid-area: board;
   justify-self: start;
   min-height: 28px;
-  margin: 6px 0 0;
+  margin: 10px 0 0;
 }
 
 #game-switcher .experience-card-theory {
-  display: none;
+  grid-area: theory;
+  justify-self: start;
+  min-height: 30px;
+  margin-top: 10px;
 }
 
 .advanced-panel {
@@ -3598,15 +3604,29 @@ input[type='range']::-webkit-slider-thumb {
   #game-switcher .experience-card-grid {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(148px, 56%);
+    grid-auto-columns: minmax(224px, 72%);
   }
 
   #game-switcher .experience-card {
-    min-height: 86px;
+    grid-template-areas:
+      'badge'
+      'title'
+      'board'
+      'theory';
+    grid-template-columns: 1fr;
+    min-height: 142px;
+  }
+
+  #game-switcher .experience-card-eyebrow {
+    justify-self: start;
   }
 
   #game-switcher .experience-card strong {
     white-space: normal;
     line-height: 1.12;
+  }
+
+  #game-switcher .experience-card-theory {
+    display: inline-flex;
   }
 }
