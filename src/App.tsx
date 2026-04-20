@@ -1255,24 +1255,31 @@ function App() {
             <span className="control-dot control-expand" />
           </div>
           <span className="window-caption">{windowCaption}</span>
+          <nav className="window-nav" aria-label="Workspace navigation">
+            <a href="#game-switcher">Games</a>
+            <a href="#live-arena">Arena</a>
+            <a href="#training-control">Training</a>
+            <a href="#settings">Settings</a>
+            <a href="#history">History</a>
+          </nav>
           <span className="window-mode">
             {trainingActive ? 'идёт обучение' : 'профиль активен'}
           </span>
         </div>
 
-        <section className="experience-switchboard" data-mode={windowMode}>
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Game matrix</p>
-              <h2>Multi-game AI labs</h2>
-            </div>
+        <section id="game-switcher" className="experience-switchboard" data-mode={windowMode}>
+          <div className="switchboard-current">
+            <p className="eyebrow">Game tabs</p>
+            <strong>{activeExperienceCard.title}</strong>
+            <span>{activeExperienceCard.description}</span>
           </div>
-          <p className="section-copy">One workspace, several game arenas. Train engines, watch archived peaks, and play against any saved or external bot.</p>
-          <div className="experience-card-grid">
+          <div className="experience-card-grid" role="tablist" aria-label="Game labs">
             {EXPERIENCE_CARDS.map((card) => (
               <button
                 key={card.id}
                 type="button"
+                role="tab"
+                aria-selected={activeExperience === card.id}
                 className={[
                   'experience-card',
                   activeExperience === card.id ? 'active' : '',
@@ -1284,55 +1291,17 @@ function App() {
               >
                 <span className="experience-card-eyebrow">{card.eyebrow}</span>
                 <strong>{card.title}</strong>
-                <p>{card.description}</p>
-                <span className="experience-card-theory">{card.theory}</span>
                 <span className="experience-card-board">{card.board}</span>
+                <span className="experience-card-theory">{card.theory}</span>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="experience-roadmap">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Roadmap</p>
-              <h2>Project roadmap</h2>
-            </div>
-          </div>
-          <details className="disclosure-panel" open={false}>
-            <summary className="disclosure-header">
-              <div className="disclosure-copy">
-                <strong>Product roadmap</strong>
-                <span>{ROADMAP_ITEMS.length} backlog tracks, kept secondary to the live game labs.</span>
-              </div>
-              <span className="disclosure-toggle" aria-hidden="true">
-                open
-              </span>
-            </summary>
-            <div className="disclosure-body">
-              <p className="section-copy">
-                The next product layers stay here as backlog, not as first-screen noise: playable
-                bots by ELO band, a catalog of already solved tabletop games, a ranked database of
-                popular strategy and card games by solution difficulty, and a mode that can study a
-                new ruleset and recommend the best move.
-              </p>
-              <div className="roadmap-grid">
-                {ROADMAP_ITEMS.map((item) => (
-                  <article key={item.title} className="roadmap-item">
-                    <span className="roadmap-status">{item.status}</span>
-                    <strong>{item.title}</strong>
-                    <p>{item.description}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </details>
-        </section>
-
         {activeExperience === 'minesweeper' ? (
           <>
           <section className="workflow-grid">
-          <section className="play-stage top-stage">
+          <section id="live-arena" className="play-stage top-stage">
             <div className="section-head">
               <div>
                 <p className="eyebrow">Arena</p>
@@ -1453,7 +1422,7 @@ function App() {
             </div>
           </section>
 
-          <section className="profile-hub">
+          <section id="training-control" className="profile-hub">
             <div className="section-head">
               <div>
                 <p className="eyebrow">Workflow</p>
@@ -1989,7 +1958,7 @@ function App() {
           </section>
 
           <div className="side-dock">
-            <section className="settings-panel">
+            <section id="settings" className="settings-panel">
               <div className="section-head">
                 <div>
                   <p className="eyebrow">Settings</p>
@@ -2569,7 +2538,7 @@ function App() {
         </section>
 
         <section className="ledger-grid">
-          <section className="ledger-panel">
+          <section id="history" className="ledger-panel">
             <div className="section-head">
               <div>
                 <p className="eyebrow">Ledger</p>
@@ -2657,6 +2626,43 @@ function App() {
         ) : (
           <StrategyArena key={activeExperience} game={activeExperience} />
         )}
+
+        <section className="experience-roadmap">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Roadmap</p>
+              <h2>Project roadmap</h2>
+            </div>
+          </div>
+          <details className="disclosure-panel" open={false}>
+            <summary className="disclosure-header">
+              <div className="disclosure-copy">
+                <strong>Product roadmap</strong>
+                <span>{ROADMAP_ITEMS.length} backlog tracks, kept secondary to the live game labs.</span>
+              </div>
+              <span className="disclosure-toggle" aria-hidden="true">
+                open
+              </span>
+            </summary>
+            <div className="disclosure-body">
+              <p className="section-copy">
+                The next product layers stay here as backlog, not as first-screen noise: playable
+                bots by ELO band, a catalog of already solved tabletop games, a ranked database of
+                popular strategy and card games by solution difficulty, and a mode that can study a
+                new ruleset and recommend the best move.
+              </p>
+              <div className="roadmap-grid">
+                {ROADMAP_ITEMS.map((item) => (
+                  <article key={item.title} className="roadmap-item">
+                    <span className="roadmap-status">{item.status}</span>
+                    <strong>{item.title}</strong>
+                    <p>{item.description}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </details>
+        </section>
       </div>
     </div>
   )

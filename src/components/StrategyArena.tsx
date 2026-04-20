@@ -1564,7 +1564,7 @@ export function StrategyArena({ game }: StrategyArenaProps) {
 
   return (
     <>
-      <section className="workflow-grid strategy-workflow">
+      <section id="live-arena" className="workflow-grid strategy-workflow">
         <StrategyBoard
           key={`${game}-${selectedViewer?.id ?? activeProfile.id}`}
           profile={viewerProfile}
@@ -1573,7 +1573,7 @@ export function StrategyArena({ game }: StrategyArenaProps) {
           viewerNote={viewerNote}
         />
 
-        <section className="profile-hub strategy-hub">
+        <section id="training-control" className="profile-hub strategy-hub">
           <div className="section-head">
             <div>
               <p className="eyebrow">Companion</p>
@@ -1894,7 +1894,7 @@ export function StrategyArena({ game }: StrategyArenaProps) {
           </div>
         </section>
 
-        <section className="analytics-panel strategy-analytics-panel">
+        <section id="history" className="analytics-panel strategy-analytics-panel">
           <div className="section-head">
             <div>
               <p className="eyebrow">History</p>
@@ -1934,7 +1934,7 @@ export function StrategyArena({ game }: StrategyArenaProps) {
         </section>
 
         <section className="ledger-grid strategy-ledger-grid">
-          <section className="settings-panel">
+          <section id="settings" className="settings-panel">
             <div className="section-head">
               <div>
                 <p className="eyebrow">Settings</p>
@@ -2051,21 +2051,24 @@ export function StrategyArena({ game }: StrategyArenaProps) {
             </div>
           </section>
 
-          <section className="terminal-panel">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Console</p>
-                <h2>Cycle log</h2>
+          <details className="terminal-panel advanced-panel">
+            <summary className="disclosure-header advanced-summary">
+              <div className="disclosure-copy">
+                <strong>Advanced cycle log</strong>
+                <span>Open only when you need the raw training trace.</span>
               </div>
-            </div>
-            <div className="terminal-log">
+              <span className="disclosure-toggle" aria-hidden="true">
+                open
+              </span>
+            </summary>
+            <div className="terminal-log advanced-log">
               {training.logs.length > 0 ? (
                 training.logs.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)
               ) : (
                 <div>Waiting to start the cycle.</div>
               )}
             </div>
-          </section>
+          </details>
         </section>
       </section>
     </>
